@@ -1,17 +1,58 @@
 class window.AppView extends Backbone.View
 
   template: _.template '
-    <button class="hit-button">Hit</button> <button class="stand-button">Stand</button>
+    <button class="hit-button">Hit</button>
+    <button class="stand-button">Stand</button>
+    <button class="redeal-button">Redeal</button>
+    <span class="gameText"></span>
     <div class="player-hand-container"></div>
     <div class="dealer-hand-container"></div>
-  '
 
+  '
   events:
     "click .hit-button": -> @model.get('playerHand').hit()
-    "click .stand-button": -> @model.get('playerHand').stand()
+    "click .stand-button": -> @playerStand(true)
+    "click .redeal-button": ->
+      @model.redeal()
+      @initialize()
+      @render()
+
 
   initialize: ->
     @render()
+    player = @model.get 'playerHand'
+    dealer = @model.get 'dealerHand'
+    that = @
+    @$('.gameText').html "Blackjack!" if player.scores()[1] == 21
+    player.on 'add', ->
+      that.playerStand(false) if player.scores()[0] > 21
+
+  playerStand: (dealerShouldPlay) ->
+    player = @model.get 'playerHand'
+    dealer = @model.get 'dealerHand'
+    dealer.models[0].flip()
+    if dealer.scores()[1]
+      dealer.hit() while dealer.scores()[1] < 17 if dealerShouldPlay
+      dealer.hit() while dealer.scores()[0] < 17 and dealer.scores()[1] > 21 if dealerShouldPlay
+    else
+      dealer.hit() while dealer.scores()[0] < 17 if dealerShouldPlay
+    @calcWinner()
+
+  calcWinner: ->
+    player = @model.get 'playerHand'
+    dealer = @model.get 'dealerHand'
+    playerScore = player.scores()[0]
+    dealerScore = dealer.scores()[0]
+
+    if player.scores()[1] and player.scores()[1] <= 21
+       playerScore = player.scores()[1]
+
+    if dealer.scores()[1] and dealer.scores()[1] <= 21
+       dealerScore = dealer.scores()[1]
+
+    @$('.gameText').html "You win!!!!!" if playerScore > dealerScore and playerScore <= 21 or dealerScore > 21
+    @$('.gameText').html "Quit Gambling" if dealerScore > playerScore and dealerScore <= 21 or playerScore > 21
+    @$('.gameText').html "Pushed" if dealerScore == playerScore
 
   render: ->
     @$el.children().detach()
